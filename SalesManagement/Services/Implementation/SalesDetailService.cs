@@ -34,7 +34,13 @@ namespace SalesManagement.Services.Implementation
                 return new UploadResultDto { Message = columnError, Success = false };
 
             List<SalesDetailExcelRow> rows;
-            try { rows = ParseExcel(file); }
+            int headerRowIndex;
+            try
+            {
+                var parsed = ParseExcel(file);
+                rows = parsed.Rows;
+                headerRowIndex = parsed.HeaderRowIndex;
+            }
             catch (Exception ex) { return new UploadResultDto { Message = $"Parse error: {ex.Message}" }; }
 
             var existingKeys = (await _db.SalesDetail.Select(x => new { x.TRNDATE, x.VCHRNO, x.ItemCode }).ToListAsync())
@@ -46,24 +52,25 @@ namespace SalesManagement.Services.Implementation
             for (int i = 0; i < rows.Count; i++)
             {
                 var r = rows[i];
+                var excelRowNumber = headerRowIndex + 1 + i;
                 if (!DateTime.TryParse(r.TRNDATE, out var date))
                 {
                     result.Failed++;
-                    result.Errors.Add($"Row {i + 2}: Invalid TRNDATE = {r.TRNDATE}");
+                    result.Errors.Add($"Row {excelRowNumber}: Invalid TRNDATE = {r.TRNDATE}");
                     continue;
                 }
 
                 if (string.IsNullOrWhiteSpace(r.VCHRNO))
                 {
                     result.Failed++;
-                    result.Errors.Add($"Row {i + 2}: Missing VCHRNO = {r.VCHRNO}");
+                    result.Errors.Add($"Row {excelRowNumber}: Missing VCHRNO = {r.VCHRNO}");
                     continue;
                 }
 
                 if (string.IsNullOrWhiteSpace(r.ItemCode))
                 {
                     result.Failed++;
-                    result.Errors.Add($"Row {i + 2}: Missing ItemCode = {r.ItemCode}");
+                    result.Errors.Add($"Row {excelRowNumber}: Missing ItemCode = {r.ItemCode}");
                     continue;
                 }
 
@@ -117,10 +124,11 @@ namespace SalesManagement.Services.Implementation
             }
 
             result.Inserted = toInsert.Count;
+            result.TotalRowsInFile = rows.Count;
             result.Success = true;
             return result;
         }
-        private static List<SalesDetailExcelRow> ParseExcel(IFormFile file)
+        private static (List<SalesDetailExcelRow> Rows, int HeaderRowIndex) ParseExcel(IFormFile file)
         {
             using var stream = file.OpenReadStream();
             using var wb = new XLWorkbook(stream);
@@ -150,13 +158,19 @@ namespace SalesManagement.Services.Implementation
             for (int i = headerRowIndex + 1; i <= lastRow; i++)
             {
                 var r = ws.Row(i);
+                var dateVal = r.Cell(1).GetValue<string>().Trim();
+                var vchrno = r.Cell(3).GetValue<string>().Trim();
+                var itemcode = r.Cell(5).GetValue<string>().Trim();
+
+                if (string.IsNullOrWhiteSpace(dateVal) && string.IsNullOrWhiteSpace(vchrno) && string.IsNullOrWhiteSpace(itemcode))
+                    continue;
                 rows.Add(new SalesDetailExcelRow
                 {
-                    TRNDATE = r.Cell(1).GetValue<string>(),
+                    TRNDATE = dateVal,
                     BSDate = r.Cell(2).GetValue<string>(),
-                    VCHRNO = r.Cell(3).GetValue<string>(),
+                    VCHRNO = vchrno,
                     REFNO = r.Cell(4).GetValue<string>(),
-                    ItemCode = r.Cell(5).GetValue<string>(),
+                    ItemCode = itemcode,
                     Desca = r.Cell(6).GetValue<string>(),
                     BillTo = r.Cell(7).GetValue<string>(),
                     Barcode = r.Cell(8).GetValue<string>(),
@@ -184,7 +198,7 @@ namespace SalesManagement.Services.Implementation
                     Terminal = r.Cell(30).GetValue<string>()
                 });
             }
-            return rows;
+            return (rows, headerRowIndex);
         }
         private static decimal ParseDecimal(string? val) => decimal.TryParse(val, out var d) ? d : 0;
 

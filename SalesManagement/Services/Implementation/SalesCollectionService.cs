@@ -34,10 +34,22 @@ namespace SalesManagement.Services.Implementation
                 return new UploadResultDto { Message = columnError, Success = false };
 
             List<SalesCollectionExcelRow> rows;
-            try { rows = ParseExcel(file); }
-            catch (Exception ex) { return new UploadResultDto { Message = $"Parse error: {ex.Message}" }; }
+            int headerRowIndex;
 
-            var existingKeys = (await _db.SalesCollections.Select(x => new { x.Date, x.Invoice }).ToListAsync())
+            try
+            {
+                var parsed = ParseExcel(file);
+                rows = parsed.Rows;
+                headerRowIndex = parsed.HeaderRowIndex;
+            }
+            catch (Exception ex)
+            {
+                return new UploadResultDto { Message = $"Parse error: {ex.Message}" };
+            }
+
+            var existingKeys = (await _db.SalesCollections
+                    .Select(x => new { x.Date, x.Invoice })
+                    .ToListAsync())
                 .Select(x => (x.Date.Date, x.Invoice))
                 .ToHashSet();
 
@@ -46,16 +58,20 @@ namespace SalesManagement.Services.Implementation
             for (int i = 0; i < rows.Count; i++)
             {
                 var r = rows[i];
+
+                var excelRowNumber = headerRowIndex + 1 + i;
+
                 if (!DateTime.TryParse(r.Date, out var date))
                 {
                     result.Failed++;
-                    result.Errors.Add($"Row {i + 2}: Invalid TRNDATE = {r.Date}");
+                    result.Errors.Add($"Row {excelRowNumber}: Invalid TRNDATE = {r.Date}");
                     continue;
                 }
+
                 if (string.IsNullOrWhiteSpace(r.Invoice))
                 {
                     result.Failed++;
-                    result.Errors.Add($"Row {i + 2}: Missing VCHRNO = {r.Invoice}");
+                    result.Errors.Add($"Row {excelRowNumber}: Missing VCHRNO = {r.Invoice}");
                     continue;
                 }
 
@@ -102,10 +118,11 @@ namespace SalesManagement.Services.Implementation
             }
 
             result.Inserted = toInsert.Count;
+            result.TotalRowsInFile = rows.Count;
             result.Success = true;
             return result;
         }
-        private static List<SalesCollectionExcelRow> ParseExcel(IFormFile file)
+        private static (List<SalesCollectionExcelRow> Rows, int HeaderRowIndex) ParseExcel(IFormFile file)
         {
             using var stream = file.OpenReadStream();
             using var wb = new XLWorkbook(stream);
@@ -114,7 +131,6 @@ namespace SalesManagement.Services.Implementation
             var lastRow = ws.LastRowUsed().RowNumber();
             var lastCol = ws.LastColumnUsed().ColumnNumber();
 
-            // Find header row dynamically
             int headerRowIndex = 1;
             for (int row = 1; row <= lastRow; row++)
             {
@@ -134,14 +150,20 @@ namespace SalesManagement.Services.Implementation
 
             var rows = new List<SalesCollectionExcelRow>();
 
-            // Start reading data from the row AFTER the header
             for (int i = headerRowIndex + 1; i <= lastRow; i++)
             {
                 var r = ws.Row(i);
+
+                var dateVal = r.Cell(1).GetValue<string>().Trim();
+                var invoiceVal = r.Cell(2).GetValue<string>().Trim();
+
+                if (string.IsNullOrWhiteSpace(dateVal) && string.IsNullOrWhiteSpace(invoiceVal))
+                    continue;
+
                 rows.Add(new SalesCollectionExcelRow
                 {
-                    Date = r.Cell(1).GetValue<string>(),
-                    Invoice = r.Cell(2).GetValue<string>(),
+                    Date = dateVal,
+                    Invoice = invoiceVal,
                     Party = r.Cell(3).GetValue<string>(),
                     Gross = r.Cell(4).GetValue<string>(),
                     Discount = r.Cell(5).GetValue<string>(),
@@ -166,14 +188,20 @@ namespace SalesManagement.Services.Implementation
                 });
             }
 
-            return rows;
+            return (rows, headerRowIndex);
         }
 
-        private static decimal ParseDecimal(string? val) => decimal.TryParse(val, out var d) ? d : 0;
-        private static int? ParseNullableInt(string? val) => int.TryParse(val, out var i) ? i : null;
+        private static decimal ParseDecimal(string? val) =>
+            decimal.TryParse(val, out var d) ? d : 0;
 
-        private static readonly string[] SalesDetailSignature = new[] { "ITEMCODE", "BILLQTY", "BILLRATE", "BASEUNIT" };
-        private static readonly string[] KotSignature = new[] { "KOTNO", "TABLENO", "WAITER" }; 
+        private static int? ParseNullableInt(string? val) =>
+            int.TryParse(val, out var i) ? i : null;
+
+        private static readonly string[] SalesDetailSignature =
+            new[] { "ITEMCODE", "BILLQTY", "BILLRATE", "BASEUNIT" };
+
+        private static readonly string[] KotSignature =
+            new[] { "KOTNO", "TABLENO", "WAITER" };
 
         private static string DetectFileType(string[] actualHeaders)
         {
@@ -188,11 +216,12 @@ namespace SalesManagement.Services.Implementation
 
         private static readonly string[] ExpectedColumns = new[]
         {
-            "Date","Invoice", "Party","Gross", "Discount", "Net Sale", "Vat", "Total",
-            "TRNUser", "TRNTime", "STax", "Pax", "BillToPan", "BillToMob",
-            "Cash", "CreditCard", "Credit", "Online", "GVoucher",
-            "SalesReturnVoucher", "Complimentary", "TransactionId", "OrderMode"
-        };
+        "Date", "Invoice", "Party", "Gross", "Discount", "Net Sale", "Vat", "Total",
+        "TRNUser", "TRNTime", "STax", "Pax", "BillToPan", "BillToMob",
+        "Cash", "CreditCard", "Credit", "Online", "GVoucher",
+        "SalesReturnVoucher", "Complimentary", "TransactionId", "OrderMode"
+    };
+
         private static string? ValidateColumns(IFormFile file, string expectedType)
         {
             using var stream = file.OpenReadStream();
@@ -204,7 +233,6 @@ namespace SalesManagement.Services.Implementation
 
             string[]? actualHeaders = null;
 
-            // Scan each row until we find the header row
             for (int row = 1; row <= lastRow; row++)
             {
                 var rowValues = Enumerable.Range(1, lastCol)
@@ -212,18 +240,16 @@ namespace SalesManagement.Services.Implementation
                     .Where(v => !string.IsNullOrWhiteSpace(v))
                     .ToArray();
 
-                // Check if this row contains at least some of our expected columns
                 var matchCount = rowValues.Count(v =>
                     ExpectedColumns.Any(e => e.ToUpperInvariant() == v));
 
-                if (matchCount >= 3) // ← if 3+ columns match, this is our header row
+                if (matchCount >= 3)
                 {
                     actualHeaders = rowValues;
                     break;
                 }
             }
 
-            // No header row found at all
             if (actualHeaders == null)
                 return "Wrong file uploaded. Your selected file doesn't match. Please make sure you are uploading the correct Excel file.";
 
@@ -246,7 +272,7 @@ namespace SalesManagement.Services.Implementation
                 return message;
             }
 
-            return null; // valid
+            return null; 
         }
     }
 }
