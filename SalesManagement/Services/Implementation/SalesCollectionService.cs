@@ -14,13 +14,11 @@ namespace SalesManagement.Services.Implementation
     {
         private readonly AppDbContext _db;
         private readonly ILogger<SalesCollectionService> _logger;
-
         public SalesCollectionService(AppDbContext db, ILogger<SalesCollectionService> logger)
         {
             _db = db;
             _logger = logger;
         }
-        
         public async Task<UploadResultDto> UploadExcelAsync(IFormFile file, string expectedType)
         {
             var result = new UploadResultDto();
@@ -107,46 +105,6 @@ namespace SalesManagement.Services.Implementation
             result.Success = true;
             return result;
         }
-        /* private static List<SalesCollectionExcelRow> ParseExcel(IFormFile file)
-         {
-             using var stream = file.OpenReadStream();
-             using var wb = new XLWorkbook(stream);
-             var ws = wb.Worksheets.First();
-             var rows = new List<SalesCollectionExcelRow>();
-             for (int i = 2; i <= ws.LastRowUsed().RowNumber(); i++)
-             {
-                 var r = ws.Row(i);
-                 rows.Add(new SalesCollectionExcelRow
-                 {
-                     Date = r.Cell(1).GetValue<string>(),
-                     Invoice = r.Cell(2).GetValue<string>(),
-                     Party = r.Cell(3).GetValue<string>(),
-                     Gross = r.Cell(4).GetValue<string>(),
-                     Discount = r.Cell(5).GetValue<string>(),
-                     NetSale = r.Cell(6).GetValue<string>(),
-                     Vat = r.Cell(7).GetValue<string>(),
-                     Total = r.Cell(8).GetValue<string>(),
-                     TRNUser = r.Cell(9).GetValue<string>(),
-                     TRNTime = r.Cell(10).GetValue<string>(),
-                     STax = r.Cell(11).GetValue<string>(),
-                     Pax = r.Cell(12).GetValue<string>(),
-                     BillToPan = r.Cell(13).GetValue<string>(),
-                     BillToMob = r.Cell(14).GetValue<string>(),
-                     Cash = r.Cell(15).GetValue<string>(),
-                     CreditCard = r.Cell(16).GetValue<string>(),
-                     Credit = r.Cell(17).GetValue<string>(),
-                     Online = r.Cell(18).GetValue<string>(),
-                     GVoucher = r.Cell(19).GetValue<string>(),
-                     SalesReturnVoucher = r.Cell(20).GetValue<string>(),
-                     Complimentary = r.Cell(21).GetValue<string>(),
-                     TransactionId = r.Cell(22).GetValue<string>(),
-                     OrderMode = r.Cell(23).GetValue<string>()
-                 });
-             }
-             return rows;
-         }
- */
-       
         private static List<SalesCollectionExcelRow> ParseExcel(IFormFile file)
         {
             using var stream = file.OpenReadStream();
@@ -215,7 +173,7 @@ namespace SalesManagement.Services.Implementation
         private static int? ParseNullableInt(string? val) => int.TryParse(val, out var i) ? i : null;
 
         private static readonly string[] SalesDetailSignature = new[] { "ITEMCODE", "BILLQTY", "BILLRATE", "BASEUNIT" };
-        private static readonly string[] KotSignature = new[] { "KOTNO", "TABLENO", "WAITER" }; // your actual KOT unique columns
+        private static readonly string[] KotSignature = new[] { "KOTNO", "TABLENO", "WAITER" }; 
 
         private static string DetectFileType(string[] actualHeaders)
         {
@@ -235,34 +193,6 @@ namespace SalesManagement.Services.Implementation
             "Cash", "CreditCard", "Credit", "Online", "GVoucher",
             "SalesReturnVoucher", "Complimentary", "TransactionId", "OrderMode"
         };
-        /* private static string? ValidateColumns(IFormFile file)
-         {
-             using var stream = file.OpenReadStream();
-             using var wb = new XLWorkbook(stream);
-             var ws = wb.Worksheets.First();
-
-             // Read header row (row 1)
-             var lastCol = ws.LastColumnUsed().ColumnNumber();
-             var actualHeaders = Enumerable.Range(1, lastCol)
-                 .Select(c => ws.Cell(1, c).GetValue<string>().Trim().ToUpperInvariant())
-                 .ToArray();
-
-             var missing = ExpectedColumns
-                 .Where(e => !actualHeaders.Contains(e.ToUpperInvariant()))
-                 .ToList();
-
-             var extra = actualHeaders
-                 .Where(a => !ExpectedColumns.Any(e => e.ToUpperInvariant() == a) && !string.IsNullOrWhiteSpace(a))
-                 .ToList();
-
-             if (missing.Any() || extra.Any())
-             {
-                 var msg = $"Wrong file uploaded. Your selected file doesn't match. Please make sure you are uploading the correct Excel file.";
-                 return msg;
-             }
-
-             return null; // valid
-         }*/
         private static string? ValidateColumns(IFormFile file, string expectedType)
         {
             using var stream = file.OpenReadStream();

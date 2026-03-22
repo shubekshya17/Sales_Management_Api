@@ -8,6 +8,7 @@ using SalesManagement.Models;
 using SalesManagement.Services.Interface;
 using System.Globalization;
 using System.Linq;
+using System.Reflection.Metadata;
 
 namespace SalesManagement.Services.Implementation
 {
@@ -17,15 +18,18 @@ namespace SalesManagement.Services.Implementation
         private readonly ILogger<SalesDetailService> _logger;
         public SalesDetailService(AppDbContext db, ILogger<SalesDetailService> logger)
             => (_db, _logger) = (db, logger);
-
-        public async Task<UploadResultDto> UploadExcelAsync(IFormFile file)
+        public async Task<UploadResultDto> UploadExcelAsync(IFormFile file, string expectedType)
         {
             var result = new UploadResultDto();
+
             if (file == null || file.Length == 0)
                 return new UploadResultDto { Message = "File missing" };
+
             if (!file.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
                 return new UploadResultDto { Message = "Only .xlsx files accepted" };
-            var columnError = ValidateColumns(file);
+
+            var columnError = ValidateColumns(file, expectedType);
+
             if (columnError != null)
                 return new UploadResultDto { Message = columnError, Success = false };
 
@@ -42,15 +46,26 @@ namespace SalesManagement.Services.Implementation
             for (int i = 0; i < rows.Count; i++)
             {
                 var r = rows[i];
-                if (!DateTime.TryParse(r.TRNDATE, out var date)) { result.Failed++;
+                if (!DateTime.TryParse(r.TRNDATE, out var date))
+                {
+                    result.Failed++;
                     result.Errors.Add($"Row {i + 2}: Invalid TRNDATE = {r.TRNDATE}");
-                    continue; }
-                if (string.IsNullOrWhiteSpace(r.VCHRNO)) { result.Failed++;
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(r.VCHRNO))
+                {
+                    result.Failed++;
                     result.Errors.Add($"Row {i + 2}: Missing VCHRNO = {r.VCHRNO}");
-                    continue; }
-                if (string.IsNullOrWhiteSpace(r.ItemCode)) { result.Failed++;
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(r.ItemCode))
+                {
+                    result.Failed++;
                     result.Errors.Add($"Row {i + 2}: Missing ItemCode = {r.ItemCode}");
-                    continue; }
+                    continue;
+                }
 
                 var key = (date.Date, r.VCHRNO, r.ItemCode);
                 if (existingKeys.Contains(key)) { result.Updated++; continue; }
@@ -105,14 +120,34 @@ namespace SalesManagement.Services.Implementation
             result.Success = true;
             return result;
         }
-
         private static List<SalesDetailExcelRow> ParseExcel(IFormFile file)
         {
             using var stream = file.OpenReadStream();
             using var wb = new XLWorkbook(stream);
             var ws = wb.Worksheets.First();
+
+            var lastRow = ws.LastRowUsed().RowNumber();
+            var lastCol = ws.LastColumnUsed().ColumnNumber();
+
+            int headerRowIndex = 1;
+            for (int row = 1; row <= lastRow; row++)
+            {
+                var rowValues = Enumerable.Range(1, lastCol)
+                    .Select(c => ws.Cell(row, c).GetValue<string>().Trim().ToUpperInvariant())
+                    .ToArray();
+
+                var matchCount = rowValues.Count(v =>
+                    ExpectedColumns.Any(e => e.ToUpperInvariant() == v));
+
+                if (matchCount >= 3)
+                {
+                    headerRowIndex = row;
+                    break;
+                }
+            }
+
             var rows = new List<SalesDetailExcelRow>();
-            for (int i = 2; i <= ws.LastRowUsed().RowNumber(); i++)
+            for (int i = headerRowIndex + 1; i <= lastRow; i++)
             {
                 var r = ws.Row(i);
                 rows.Add(new SalesDetailExcelRow
@@ -153,6 +188,19 @@ namespace SalesManagement.Services.Implementation
         }
         private static decimal ParseDecimal(string? val) => decimal.TryParse(val, out var d) ? d : 0;
 
+        private static readonly string[] SalesCollectionSignature = new[] { "DATE", "INVOICE", "PARTY", "GROSS" };
+        private static readonly string[] KotSignature = new[] { "KOTNO", "TABLENO", "WAITER" };
+        private static string DetectFileType(string[] actualHeaders)
+        {
+            if (SalesCollectionSignature.All(col => actualHeaders.Contains(col.ToUpperInvariant())))
+                return "Sales Collection";
+
+            if (KotSignature.All(col => actualHeaders.Contains(col.ToUpperInvariant())))
+                return "KOT";
+
+            return "unknown";
+        }
+
         private static readonly string[] ExpectedColumns = new[]
         {
             "TRNDATE","BSDate", "VCHRNO","REFNO","ItemCode","Desca","BillTo", "Barcode", "BillUnit", "BillQty",
@@ -161,36 +209,57 @@ namespace SalesManagement.Services.Implementation
             "NetAmnt", "TRNUser", "TRNTime", "Division",
             "Salesman", "MobileNo", "StartTime", "EndTime", "Terminal"
         };
-        private static string? ValidateColumns(IFormFile file)
+        private static string? ValidateColumns(IFormFile file, string expectedType)
         {
             using var stream = file.OpenReadStream();
             using var wb = new XLWorkbook(stream);
             var ws = wb.Worksheets.First();
 
+            var lastRow = ws.LastRowUsed().RowNumber();
             var lastCol = ws.LastColumnUsed().ColumnNumber();
-            var actualHeaders = Enumerable.Range(1, lastCol)
-                .Select(c => ws.Cell(1, c).GetValue<string>().Trim().ToUpperInvariant())
-                .ToArray();
+            string[]? actualHeaders = null;
+
+            for (int row = 1; row <= lastRow; row++)
+            {
+                var rowValues = Enumerable.Range(1, lastCol)
+                    .Select(c => ws.Cell(row, c).GetValue<string>().Trim().ToUpperInvariant())
+                    .Where(v => !string.IsNullOrWhiteSpace(v))
+                    .ToArray();
+
+                // Check if this row contains at least some of our expected columns
+                var matchCount = rowValues.Count(v =>
+                    ExpectedColumns.Any(e => e.ToUpperInvariant() == v));
+
+                if (matchCount >= 3) // ← if 3+ columns match, this is our header row
+                {
+                    actualHeaders = rowValues;
+                    break;
+                }
+            }
+
+            if (actualHeaders == null)
+                return "Wrong file uploaded. Your selected file doesn't match. Please make sure you are uploading the correct Excel file.";
 
             var missing = ExpectedColumns
                 .Where(e => !actualHeaders.Contains(e.ToUpperInvariant()))
                 .ToList();
 
             var extra = actualHeaders
-                .Where(a => !ExpectedColumns.Any(e => e.ToUpperInvariant() == a) && !string.IsNullOrWhiteSpace(a))
+                .Where(a => !ExpectedColumns.Any(e => e.ToUpperInvariant() == a))
                 .ToList();
 
             if (missing.Any() || extra.Any())
             {
-                var msg = $"Wrong file uploaded. Your selected file doesn't match. Please make sure you are uploading the correct Excel file.";
-                return msg;
-                /*var msg = "Invalid columns.";
-                if (missing.Any()) msg +=$" Missing: {string.Join(", ", missing)}.";
-                if (extra.Any()) msg += $" Unexpected: {string.Join(", ", extra)}.";
-                return msg;*/
+                var detectedType = DetectFileType(actualHeaders);
+
+                var message = detectedType == "unknown"
+                    ? "Wrong file uploaded. Your selected file doesn't match. Please make sure you are uploading the correct Excel file."
+                    : $"Wrong file uploaded. You uploaded a {detectedType} file instead of {expectedType}. Please make sure you are uploading the correct Excel file.";
+
+                return message;
             }
+
             return null; // valid
         }
-
     }
 }

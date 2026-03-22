@@ -20,7 +20,7 @@ namespace SalesManagement.Controllers
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> Upload([FromForm] FileUploadDto request)
         {
-            var result = await _service.UploadExcelAsync(request.File);
+            var result = await _service.UploadExcelAsync(request.File, "Sales Detail");
             return result.Success ? Ok(result) : BadRequest(result);
         }
 
