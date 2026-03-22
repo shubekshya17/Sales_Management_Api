@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SalesManagement.Data;
 
@@ -11,9 +12,11 @@ using SalesManagement.Data;
 namespace SalesManagement.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260322093511_Added KOT Table")]
+    partial class AddedKOTTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -99,9 +102,6 @@ namespace SalesManagement.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("REMARKS")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("RowHash")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SPLITKOT")

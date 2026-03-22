@@ -220,7 +220,13 @@ namespace SalesManagement.Services.Implementation
         "TRNUser", "TRNTime", "STax", "Pax", "BillToPan", "BillToMob",
         "Cash", "CreditCard", "Credit", "Online", "GVoucher",
         "SalesReturnVoucher", "Complimentary", "TransactionId", "OrderMode"
-    };
+        };
+
+        private static readonly string[] DetectColumns = new[]
+        {
+        "ITEMCODE", "BILLQTY", "BILLRATE", "BASEUNIT",
+        "KOTNO", "TABLENO", "WAITER",
+        };
 
         private static string? ValidateColumns(IFormFile file, string expectedType)
         {
@@ -247,6 +253,16 @@ namespace SalesManagement.Services.Implementation
                 {
                     actualHeaders = rowValues;
                     break;
+                }
+                if (actualHeaders == null)
+                {
+                    var detectCount = rowValues.Count(v =>
+                    DetectColumns.Any(e => e.ToUpperInvariant() == v));
+                    if (detectCount >= 3)
+                    {
+                        actualHeaders = rowValues;
+                        break;
+                    }
                 }
             }
 

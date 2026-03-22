@@ -223,6 +223,11 @@ namespace SalesManagement.Services.Implementation
             "NetAmnt", "TRNUser", "TRNTime", "Division",
             "Salesman", "MobileNo", "StartTime", "EndTime", "Terminal"
         };
+        private static readonly string[] DetectColumns = new[]
+        {
+            "DATE", "INVOICE", "PARTY", "GROSS",
+            "KOTNO", "TABLENO", "WAITER",
+        };
         private static string? ValidateColumns(IFormFile file, string expectedType)
         {
             using var stream = file.OpenReadStream();
@@ -248,6 +253,16 @@ namespace SalesManagement.Services.Implementation
                 {
                     actualHeaders = rowValues;
                     break;
+                }
+                if (actualHeaders == null)
+                {
+                    var detectCount = rowValues.Count(v =>
+                    DetectColumns.Any(e => e.ToUpperInvariant() == v));
+                    if (detectCount >= 3)
+                    {
+                        actualHeaders = rowValues;
+                        break;
+                    }
                 }
             }
 

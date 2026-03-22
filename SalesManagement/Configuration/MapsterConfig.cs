@@ -8,7 +8,6 @@ namespace SalesManagement.Configuration
     {
         public static void RegisterMappings()
         {
-            
         }
     }
 }
