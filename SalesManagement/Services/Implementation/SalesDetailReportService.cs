@@ -29,7 +29,7 @@ namespace SalesManagement.Services.Implementation
                 return new
                 {
                     CategoryName = category?.CategoryName ?? "Uncategorized",
-                    s.Amount,
+                    s.NetAmnt,
                     s.Discount
                 };
             });
@@ -40,12 +40,12 @@ namespace SalesManagement.Services.Implementation
                 .Select(g => new CategoryWiseAmount
                 {
                     CategoryName = g.Key,
-                    Amount = g.Sum(x => x.Amount)
+                    Amount = g.Sum(x => x.NetAmnt)
                 })
                 .ToList();
 
             // Calculate overall totals
-            var totalAmount = salesWithCategory.Sum(x => x.Amount);
+            var totalAmount = salesWithCategory.Sum(x => x.NetAmnt);
             var totalDiscount = salesWithCategory.Sum(x => x.Discount);
             var vat = (totalAmount - totalDiscount) * 0.13m;
             var total = (totalAmount - totalDiscount) + vat;

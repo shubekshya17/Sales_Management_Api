@@ -12,6 +12,7 @@ builder.Services.AddScoped<ISalesDetail, SalesDetailService>();
 builder.Services.AddScoped<ICategoryRange, CategoryRangeService>();
 builder.Services.AddScoped<ISalesDetailReport, SalesDetailReportService>();
 builder.Services.AddScoped<IKOTService, KOTService>();
+builder.Services.AddScoped<ISalesCollectionReport, SalesCollectionReportService>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(
