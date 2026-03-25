@@ -59,5 +59,56 @@ namespace SalesManagement.Services.Implementation
                 Total = total
             };
         }
+        public async Task<List<SalesDetailItem>> GetSalesDetailCategoryWise(SalesDetailCategoryWise request)
+        {
+            var sales = await _context.SalesDetail
+                .Where(s => s.TRNDATE >= request.FromDate && s.TRNDATE <= request.ToDate)
+                .ToListAsync();
+
+            var categories = await _context.CategoryRanges.ToListAsync();
+
+            return sales
+                .Where(s =>
+                {
+                    if (!decimal.TryParse(s.ItemCode, out var itemValue)) itemValue = 0;
+                    var category = categories.FirstOrDefault(c => itemValue >= c.MinValue && itemValue <= c.MaxValue);
+                    var catName = category?.CategoryName ?? "Uncategorized";
+                    return catName == request.CategoryName;
+                })
+                .Select(s => new SalesDetailItem
+                {
+                    TrnDate = s.TRNDATE,
+                    BsDate = s.BSDate ?? "",
+                    VchrNo = s.VCHRNO ?? "",
+                    RefNo = s.REFNO ?? "",
+                    ItemCode = s.ItemCode ?? "",
+                    Desca = s.Desca ?? "",
+                    BillTo = s.BillTo ?? "",
+                    Barcode = s.Barcode ?? "",
+                    BillUnit = s.BillUnit ?? "",
+                    BillQty = s.BILLQTY,
+                    BillRate = s.BillRate,
+                    BaseUnit = s.BaseUnit ?? "",
+                    BaseQty = s.BaseQty,
+                    BaseRate = s.BaseRate,
+                    Amount = s.Amount,
+                    Discount = s.Discount,
+                    SCharge = s.SCharge,
+                    NetSale = s.NetSale,
+                    Taxable = s.Taxable,
+                    NonTaxable = s.NonTaxable,
+                    Vat = s.Vat,
+                    NetAmnt = s.NetAmnt,
+                    TrnUser = s.TRNUser ?? "",
+                    TrnTime = s.TRNTime ?? "",
+                    Division = s.Division ?? "",
+                    Salesman = s.Salesman ?? "",
+                    MobileNo = s.MobileNo ?? "",
+                    StartTime = s.StartTime,
+                    EndTime = s.EndTime,
+                    Terminal = s.Terminal ?? ""
+                })
+                .ToList();
+        }
     }
 }

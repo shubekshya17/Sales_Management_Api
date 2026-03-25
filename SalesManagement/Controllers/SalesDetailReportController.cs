@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using SalesManagement.Dtos;
+using SalesManagement.Services.Implementation;
 using SalesManagement.Services.Interface;
 
 namespace SalesManagement.Controllers
@@ -18,6 +19,12 @@ namespace SalesManagement.Controllers
         {
             var report = await _service.GetSalesDetailReport(request);
             return Ok(report);
+        }
+        [HttpPost("category-detail")]
+        public async Task<IActionResult> GetCategoryWiseDetail([FromBody] SalesDetailCategoryWise request)
+        {
+            var result = await _service.GetSalesDetailCategoryWise(request);
+            return Ok(result);
         }
     }
 }
