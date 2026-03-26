@@ -26,5 +26,11 @@ namespace SalesManagement.Controllers
             var result = await _salesCollectionReport.GetSalesCollectionReport(request);
             return Ok(result);
         }
+        [HttpPost("payment-detail")]
+        public async Task<IActionResult> GetPaymentDetail([FromBody] PaymentDetailRequest request)
+        {
+            var result = await _salesCollectionReport.GetPaymentDetail(request);
+            return Ok(result);
+        }
     }
 }

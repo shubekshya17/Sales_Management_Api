@@ -62,5 +62,53 @@ namespace SalesManagement.Services.Implementation
                 Total = total
             };
         }
+        public Task<List<SalesCollectionDetail>> GetPaymentDetail(PaymentDetailRequest request)
+        {
+            var query = _context.SalesCollections
+                .Where(x => x.Date >= request.FromDate && x.Date <= request.ToDate);
+
+            // Normalize input (avoid case issues)
+            var method = request.PaymentMethod.ToLower().Trim();
+
+            query = method switch
+            {
+                "cash" => query.Where(x => x.Cash > 0),
+                "credit card" => query.Where(x => x.CreditCard > 0),
+                "online" => query.Where(x => x.Online > 0),
+                "credit" => query.Where(x => x.Credit > 0),
+
+                _ => throw new Exception("Invalid payment method")
+            };
+
+            return query
+                .OrderByDescending(x => x.Date)
+                .Select(x => new SalesCollectionDetail
+                {
+                    Date = x.Date,
+                    Invoice = x.Invoice,
+                    Party = x.Party ?? string.Empty,
+                    Gross = x.Gross,
+                    Discount = x.Discount,
+                    NetSale = x.NetSale,
+                    Vat = x.Vat,
+                    Total = x.Total,
+                    TRNUser = x.TRNUser ?? string.Empty,
+                    TRNTime = x.TRNTime ?? string.Empty,
+                    STax = x.STax,
+                    Pax = x.Pax ?? 0,
+                    BillToPan = x.BillToPan ?? string.Empty,
+                    BillToMob = x.BillToMob ?? string.Empty,
+                    Cash = x.Cash,
+                    CreditCard = x.CreditCard,
+                    Credit = x.Credit,
+                    Online = x.Online,
+                    GVoucher = x.GVoucher,
+                    SalesReturnVoucher = x.SalesReturnVoucher,
+                    Complimentary = x.Complimentary,
+                    TransactionId = x.TransactionId ?? string.Empty,
+                    OrderMode = x.OrderMode ?? string.Empty
+                })
+                .ToListAsync();
+        }
     }
 }
