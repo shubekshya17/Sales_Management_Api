@@ -1,5 +1,6 @@
 ﻿
 using ClosedXML.Excel;
+using Hangfire;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using SalesManagement.Data;
@@ -16,8 +17,9 @@ namespace SalesManagement.Services.Implementation
     {
         private readonly AppDbContext _db;
         private readonly ILogger<SalesDetailService> _logger;
-        public SalesDetailService(AppDbContext db, ILogger<SalesDetailService> logger)
-            => (_db, _logger) = (db, logger);
+        private readonly IBackgroundJobClient _jobClient;
+        public SalesDetailService(AppDbContext db, ILogger<SalesDetailService> logger, IBackgroundJobClient jobClient)
+            => (_db, _logger, _jobClient) = (db, logger, jobClient);
         public async Task<UploadResultDto> UploadExcelAsync(IFormFile file, string expectedType)
         {
             var result = new UploadResultDto();
@@ -121,6 +123,7 @@ namespace SalesManagement.Services.Implementation
             {
                 await _db.SalesDetail.AddRangeAsync(toInsert);
                 await _db.SaveChangesAsync();
+                _jobClient.Enqueue<ProductSyncService>(x => x.SyncProductsAsync());
             }
 
             result.Inserted = toInsert.Count;

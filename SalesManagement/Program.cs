@@ -1,3 +1,4 @@
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using SalesManagement.Configuration;
 using SalesManagement.Data;
@@ -13,11 +14,17 @@ builder.Services.AddScoped<ICategoryRange, CategoryRangeService>();
 builder.Services.AddScoped<ISalesDetailReport, SalesDetailReportService>();
 builder.Services.AddScoped<IKOTService, KOTService>();
 builder.Services.AddScoped<ISalesCollectionReport, SalesCollectionReportService>();
+builder.Services.AddScoped<IProductService, ProductService>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection")
     ));
+
+builder.Services.AddHangfire(config =>
+    config.UseSqlServerStorage(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddHangfireServer();
 
 // Add services to the container.
 
@@ -50,6 +57,7 @@ if (app.Environment.IsDevelopment())
 app.UseCors("AllowAll");
 app.UseAuthorization();
 
+app.UseHangfireDashboard("/hangfire");
 app.MapControllers();
 
 app.Run();

@@ -9,6 +9,7 @@ namespace SalesManagement.Data
         public DbSet<SalesCollection> SalesCollections { get; set; }
         public DbSet<SalesDetail> SalesDetail { get; set; }
         public DbSet<CategoryRange> CategoryRanges { get; set; }
+        public DbSet<Product> Products { get; set; }
         public DbSet<KOT> KOT { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
