@@ -15,6 +15,7 @@ builder.Services.AddScoped<ISalesDetailReport, SalesDetailReportService>();
 builder.Services.AddScoped<IKOTService, KOTService>();
 builder.Services.AddScoped<ISalesCollectionReport, SalesCollectionReportService>();
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IProductIngredient, ProductIngredientService>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(
