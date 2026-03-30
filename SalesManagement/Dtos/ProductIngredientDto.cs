@@ -9,6 +9,11 @@
         public int Updated { get; set; }
         public int Failed { get; set; }
         public List<string> Errors { get; set; } = new();
-
+    }
+    public class ProductIngredientDropdownDto
+    {
+       public int Id { get; set; }
+       public string Ingredient { get; set; }
+       public string Unit { get; set; }
     }
 }

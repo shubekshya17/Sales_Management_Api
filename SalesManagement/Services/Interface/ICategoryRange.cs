@@ -6,5 +6,6 @@ namespace SalesManagement.Services.Interface
     {
         Task<CategoryRangeDto> CreateAsync(CreateCategoryRangeDto dto);
         Task<List<CategoryRangeDto>> GetAllAsync();
+        Task<List<CategoryDropdownDto>> GetCategoryDropdownAsync();
     }
 }

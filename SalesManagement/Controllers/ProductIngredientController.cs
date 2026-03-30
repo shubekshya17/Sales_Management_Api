@@ -36,5 +36,11 @@ namespace SalesManagement.Controllers
                 return StatusCode(500, new { Message = "An error occurred while processing the file" });
             }
         }
+        [HttpGet("Dropdown")]
+        public async Task<IActionResult> GetProductIngredientDropdown()
+        {
+            var result = await _service.GetProductIngredientDropdownAsync();
+            return Ok(result);
+        }
     }
 }

@@ -299,5 +299,17 @@ namespace SalesManagement.Services.Implementation
             return sectionKeywords.Any(keyword =>
                 value.Contains(keyword, StringComparison.OrdinalIgnoreCase));
         }
+        public async Task<List<ProductIngredientDropdownDto>> GetProductIngredientDropdownAsync()
+        {
+            return await _db.ProductIngredients
+                .OrderBy(x => x.Id)
+                .Select(x => new ProductIngredientDropdownDto
+                {
+                    Id = x.Id,
+                    Ingredient = x.Ingredient,
+                    Unit = x.Unit
+                })
+                .ToListAsync();
+        }
     }
 }

@@ -36,5 +36,12 @@ namespace SalesManagement.Controllers
             var result = await _service.GetAllAsync();
             return Ok(result);
         }
+
+        [HttpGet("Dropdown")]
+        public async Task<IActionResult> GetCategoryDropdown()
+        {
+            var result = await _service.GetCategoryDropdownAsync();
+            return Ok(result);
+        }
     }
 }

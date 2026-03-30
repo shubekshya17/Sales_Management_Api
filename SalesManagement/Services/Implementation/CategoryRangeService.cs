@@ -54,5 +54,16 @@ namespace SalesManagement.Services.Implementation
                 })
                 .ToListAsync();
         }
+        public async Task<List<CategoryDropdownDto>> GetCategoryDropdownAsync()
+        {
+            return await _db.CategoryRanges
+                .OrderBy(x => x.Id)
+                .Select(x => new CategoryDropdownDto
+                {
+                    Id = x.Id,
+                    CategoryName = x.CategoryName
+                })
+                .ToListAsync();
+        }
     }
 }

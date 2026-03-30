@@ -13,4 +13,9 @@
         public decimal MaxValue { get; set; }
         public string CategoryName { get; set; } = string.Empty;
     }
+    public class CategoryDropdownDto
+    {
+        public int Id { get; set; }
+        public string CategoryName { get; set; } = string.Empty;
+    }
 }
