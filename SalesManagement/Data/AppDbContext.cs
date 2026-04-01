@@ -12,6 +12,8 @@ namespace SalesManagement.Data
         public DbSet<Product> Products { get; set; }
         public DbSet<KOT> KOT { get; set; }
         public DbSet<ProductIngredient> ProductIngredients { get; set; }
+        public DbSet<ProductRecipe> ProductRecipes { get; set; }
+        public DbSet<ProductRecipeDetail> ProductRecipeDetails { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
