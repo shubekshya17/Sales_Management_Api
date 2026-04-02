@@ -311,5 +311,49 @@ namespace SalesManagement.Services.Implementation
                 })
                 .ToListAsync();
         }
+
+        public async Task<ProductIngredientCreateResponseDto> CreateAsync(CreateProductIngredientDto dto)
+        {
+            var ingredient = dto.Ingredient.Trim().ToLower();
+            var unit = dto.Unit.Trim().ToLower();
+
+            var isSame = await _db.ProductIngredients.AnyAsync(x =>
+                x.Ingredient.ToLower() == ingredient &&
+                x.Unit.ToLower() == unit);
+
+            if (isSame)
+            {
+                return null;
+            }
+
+            var entity = new ProductIngredient
+            {
+                Ingredient = dto.Ingredient,
+                Unit = dto.Unit,
+                CreatedAt = DateTime.Now
+            };
+
+            _db.ProductIngredients.Add(entity);
+            await _db.SaveChangesAsync();
+
+            return new ProductIngredientCreateResponseDto
+            {
+                Id = entity.Id,
+                Ingredient = entity.Ingredient,
+                Unit = entity.Unit
+            };
+        }
+        public async Task<List<ProductIngredientCreateResponseDto>> GetAllAsync()
+        {
+            return await _db.ProductIngredients
+                .OrderBy(x => x.Ingredient)
+                .Select(x => new ProductIngredientCreateResponseDto
+                {
+                    Id = x.Id,
+                    Ingredient = x.Ingredient,
+                    Unit = x.Unit
+                })
+                .ToListAsync();
+        }
     }
 }

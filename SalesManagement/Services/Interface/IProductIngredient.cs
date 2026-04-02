@@ -6,5 +6,7 @@ namespace SalesManagement.Services.Interface
     {
         Task<UploadResultDto> UploadExcelAsync(IFormFile file);
         Task<List<ProductIngredientDropdownDto>> GetProductIngredientDropdownAsync();
+        Task<ProductIngredientCreateResponseDto> CreateAsync(CreateProductIngredientDto dto);
+        Task<List<ProductIngredientCreateResponseDto>> GetAllAsync();
     }
 }

@@ -61,7 +61,6 @@ namespace SalesManagement.Services.Implementation
                     Quantity = i.Quantity
                 }).ToList();
 
-                // Optional: update other fields if needed
                 existingRecipe.CategoryId = dto.CategoryId;
                 existingRecipe.ProductId = dto.ProductId;
 

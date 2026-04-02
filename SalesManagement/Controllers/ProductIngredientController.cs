@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using SalesManagement.Dtos;
 using SalesManagement.Services.Interface;
 
 namespace SalesManagement.Controllers
@@ -40,6 +41,30 @@ namespace SalesManagement.Controllers
         public async Task<IActionResult> GetProductIngredientDropdown()
         {
             var result = await _service.GetProductIngredientDropdownAsync();
+            return Ok(result);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Create(CreateProductIngredientDto dto)
+        {
+            try
+            {
+                var result = await _service.CreateAsync(dto);
+                if (result == null)
+                {
+                    return BadRequest(new { message = "Product Ingredient already exists" });
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
+        {
+            var result = await _service.GetAllAsync();
             return Ok(result);
         }
     }

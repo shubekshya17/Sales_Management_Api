@@ -16,4 +16,16 @@
        public string Ingredient { get; set; }
        public string Unit { get; set; }
     }
+    public class CreateProductIngredientDto
+    {
+        public int Id { get; set; }
+        public string Ingredient { get; set; }
+        public string Unit { get; set; }
+    }
+    public class ProductIngredientCreateResponseDto
+    {
+        public int Id { get; set; }
+        public string Ingredient { get; set; }
+        public string Unit { get; set; }
+    }
 }
