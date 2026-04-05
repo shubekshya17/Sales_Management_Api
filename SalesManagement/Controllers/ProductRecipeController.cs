@@ -34,5 +34,18 @@ namespace SalesManagement.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+        [HttpGet]
+        public async Task<ActionResult<List<ProductRecipeListVM>>> GetAllProductRecipes()
+        {
+            try
+            {
+                var recipes = await _service.GetAllProductRecipes();
+                return Ok(recipes);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
     }
 }

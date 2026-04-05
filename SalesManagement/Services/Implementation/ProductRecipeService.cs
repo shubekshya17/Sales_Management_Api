@@ -85,5 +85,42 @@ namespace SalesManagement.Services.Implementation
 
             await _context.SaveChangesAsync();
         }
+
+        public async Task<List<ProductRecipeListVM>> GetAllProductRecipes()
+        {
+            try
+            {
+                var recipes = await _context.ProductRecipes
+    .Include(pr => pr.CategoryRange)
+    .Include(pr => pr.Product)
+    .Include(pr => pr.Details)
+        .ThenInclude(prd => prd.ProductIngredient)
+    .OrderByDescending(pr => pr.CreatedAt)
+    .Select(pr => new ProductRecipeListVM
+    {
+        Id = pr.Id,
+        CategoryId = pr.CategoryId,
+        CategoryName = pr.CategoryRange.CategoryName, // FIX HERE ALSO
+        ProductId = pr.ProductId,
+        ProductName = pr.Product.Name,
+        CreatedAt = pr.CreatedAt,
+        Ingredients = pr.Details.Select(prd => new RecipeIngredientVM
+        {
+            ProductRecipeDetailId = prd.Id,
+            ProductIngredientId = prd.ProductIngredientId,
+            IngredientName = prd.ProductIngredient.Ingredient,
+            UnitName = prd.UnitName,
+            Quantity = prd.Quantity
+        }).ToList()
+    })
+    .ToListAsync();
+
+                return recipes;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error fetching product recipes: {ex.Message}");
+            }
+        }
     }
 }
